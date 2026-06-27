@@ -126,6 +126,11 @@ class RejectionSampler(nn.Module):
         # won't affect the original logits tensor.
         assert logits is not None
         bonus_logits = logits[bonus_logits_indices]
+        # [SAMPLE-DBG] bonus gather done; sync so an OOB gather faults here
+        # instead of at a later async sync.
+        import torch as _torch_dbg
+        _torch_dbg.npu.synchronize()
+        print("[SAMPLE-DBG] forward: bonus_logits gather OK", flush=True)
         bonus_sampler_output = self.sampler(
             logits=bonus_logits,
             sampling_metadata=replace(
@@ -140,11 +145,15 @@ class RejectionSampler(nn.Module):
             else "raw_logits",
         )
         bonus_token_ids = bonus_sampler_output.sampled_token_ids
+        _torch_dbg.npu.synchronize()
+        print("[SAMPLE-DBG] forward: bonus sampler OK", flush=True)
 
         # Just like `bonus_logits`, `target_logits` is a new tensor with
         # separate storage from the original `logits` tensor. Therefore,
         # it is safe to update `target_logits` in place.
         raw_target_logits = logits[target_logits_indices]
+        _torch_dbg.npu.synchronize()
+        print("[SAMPLE-DBG] forward: target_logits gather OK", flush=True)
         # Use float32 for the target_logits.
         raw_target_logits = raw_target_logits.to(torch.float32)
         target_logits = raw_target_logits
