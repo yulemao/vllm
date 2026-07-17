@@ -20,6 +20,7 @@ from vllm.utils.math_utils import cdiv, round_up
 from vllm.utils.mem_utils import format_gib
 from vllm.v1.kv_cache_interface import (
     ChunkedLocalAttentionSpec,
+    EncoderOnlyAttentionSpec,
     FullAttentionSpec,
     KVCacheConfig,
     KVCacheGroupSpec,
@@ -2049,6 +2050,40 @@ def get_kv_cache_configs(
     min_num_blocks = min(
         kv_cache_config.num_blocks for kv_cache_config in kv_cache_configs
     )
+
+    if vllm_config.parallel_config.enable_edge_cloud:
+        # In edge-cloud mode the scheduler shares block ids across workers
+        # whose layer sets are disjoint (edge owns head/tail layers, cloud
+        # owns the middle). Block ids are only meaningful if every worker
+        # interprets them with the same block_size per spec category. If
+        # TP-dependent page sizes ever diverge across sides again (e.g.
+        # unify_kv_cache_spec_page_size scaling one side's block_size),
+        # fail loudly at startup instead of corrupting KV / mamba state
+        # silently at runtime.
+        block_sizes_per_category: dict[str, set[int]] = {}
+        for kv_cache_config in kv_cache_configs:
+            for group in kv_cache_config.kv_cache_groups:
+                spec = group.kv_cache_spec
+                specs = (
+                    spec.kv_cache_specs.values()
+                    if isinstance(spec, UniformTypeKVCacheSpecs)
+                    else (spec,)
+                )
+                for s in specs:
+                    if isinstance(s, EncoderOnlyAttentionSpec):
+                        continue
+                    category = "mamba" if isinstance(s, MambaSpec) else "attn"
+                    block_sizes_per_category.setdefault(category, set()).add(
+                        s.block_size
+                    )
+        for category, sizes in block_sizes_per_category.items():
+            assert len(sizes) == 1, (
+                f"Edge-cloud workers disagree on {category} block_size "
+                f"across sides: {sorted(sizes)}. The scheduler's block "
+                f"allocation granularity must match every worker's block "
+                f"table; check TP-dependent page size handling."
+            )
+
     for kv_cache_config in kv_cache_configs:
         num_blocks_old = kv_cache_config.num_blocks
         kv_cache_config.num_blocks = min_num_blocks
