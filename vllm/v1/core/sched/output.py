@@ -32,6 +32,7 @@ class HiddenChannelType(enum.Enum):
     PREFILL_1 = "prefill_1"
     PREFILL_2 = "prefill_2"
     DECODE = "decode"
+    DRAFT = "draft"
 
 
 class BatchType(enum.Enum):
@@ -304,9 +305,9 @@ class SchedulerOutput:
     head_token: str | None = None
 
     # Data-plane hidden tensor channel for edge-cloud PD separation. Prefill
-    # head/tail batches use one of two prefill channels; decode uses the
-    # dedicated decode channel. Scheduled speculative drafts also use the
-    # decode channel. The cloud echoes this field back unchanged.
+    # head/tail batches use one of two prefill channels; decode and scheduled
+    # speculative drafts each use their own dedicated channel. The cloud
+    # echoes this field back unchanged.
     hidden_channel: HiddenChannelType | None = None
 
     # Scheduled draft control-plane identity. Each draft step uses its own
