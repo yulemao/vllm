@@ -317,6 +317,16 @@ class SchedulerOutput:
     draft_task_id: str | None = None
     draft_step_idx: int | None = None
 
+    # Edge-cloud draft metadata invalidation.  Task ids whose deferred
+    # draft was dropped on the edge before the draft chain fully consumed
+    # the cloud-side cached attention metadata (e.g. every request of the
+    # parent verify batch finished).  The cloud model runner purges the
+    # corresponding cache entries.  Produced only by the edge scheduler,
+    # consumed only by the cloud model runner.  Only tasks whose draft
+    # was never published/dispatched (or already fully consumed) are
+    # listed here, so purging can never race an in-flight DRAFT batch.
+    cloud_draft_invalidate_task_ids: list[str] | None = None
+
     @classmethod
     def make_empty(cls) -> "SchedulerOutput":
         return cls(
