@@ -316,6 +316,11 @@ class SchedulerOutput:
     parent_req_id: str | None = None
     draft_task_id: str | None = None
     draft_step_idx: int | None = None
+    # Rejection-corrected sampling state produced by the edge target step.
+    # It is carried only by DRAFT_FIRST step 0 so the cloud can update its
+    # target/draft state before running the independently scheduled draft.
+    num_accepted_tokens: list[int] | None = None
+    valid_sampled_token_count: list[int] | None = None
 
     @classmethod
     def make_empty(cls) -> "SchedulerOutput":
