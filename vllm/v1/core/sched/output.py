@@ -298,10 +298,9 @@ class SchedulerOutput:
     batch_type: BatchType = BatchType.PD_MIX
 
     # Head-token for edge-cloud PD-separation pairing.
-    # EngineCore assigns a UUID on PF/DF, cloud PassiveEngineCore echoes it
-    # back on PL/DL via POST_OUT, and the edge worker embeds it into the
-    # intermediate tensors payload so control-plane / data-plane alignment
-    # can be verified before running the tail segment.
+    # EngineCore assigns a UUID on PF/DF, and cloud PassiveEngineCore echoes
+    # it back on PL/DL via POST_OUT so the control plane can correlate the
+    # matching head and tail segments.
     head_token: str | None = None
 
     # Data-plane hidden tensor channel for edge-cloud PD separation. Prefill
