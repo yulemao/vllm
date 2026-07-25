@@ -401,10 +401,9 @@ class SchedulerOutput:
     batch_type: BatchType = BatchType.PD_MIX
 
     # Head-token for edge-cloud PD-separation pairing.
-    # EngineCore assigns a UUID on PF/DF, cloud PassiveEngineCore echoes it
-    # back on PL/DL via POST_OUT, and the edge worker embeds it into the
-    # intermediate tensors payload so control-plane / data-plane alignment
-    # can be verified before running the tail segment.
+    # EngineCore assigns a UUID on PF/DF, and cloud PassiveEngineCore echoes
+    # it back on PL/DL via POST_OUT so the control plane can correlate the
+    # matching head and tail segments.
     head_token: str | None = None
 
     # Data-plane hidden tensor channel for edge-cloud PD separation. Prefill
@@ -420,6 +419,11 @@ class SchedulerOutput:
     parent_req_id: str | None = None
     draft_task_id: str | None = None
     draft_step_idx: int | None = None
+    # Rejection-corrected sampling state produced by the edge target step.
+    # It is carried only by DRAFT_FIRST step 0 so the cloud can update its
+    # target/draft state before running the independently scheduled draft.
+    num_accepted_tokens: list[int] | None = None
+    valid_sampled_token_count: list[int] | None = None
 
     # Edge-side hint to cloud-side PassiveScheduler about whether layer slicing
     # is worthwhile for this prefill batch. True = decode is (or will soon be)
